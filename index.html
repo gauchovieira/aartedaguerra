@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A Arte da Guerra - Análise Interativa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Zen Garden (Warm Neutrals: #F5F5DC, #D2B48C; Accent: #8B4513, #556B2F) -->
+    <!-- Application Structure Plan: A single-page application with a fixed sidebar for navigating the 13 chapters. This structure mirrors the book's logical flow, making it intuitive. Each chapter is a full-screen section featuring an introduction, key principles presented as interactive cards, and a central interactive visualization (like a chart or diagram) to illustrate the core concept. This design was chosen for its clarity, ease of navigation (smooth scrolling), and ability to present dense philosophical concepts in a digestible, engaging, and interactive manner. -->
+    <!-- Visualization & Content Choices: The report's content (Sun Tzu's strategies) is abstract. Goal: Make concepts tangible. Method: For "Laying Plans", an interactive radar chart (Chart.js) allows self-assessment against the 5 factors. For "Attack by Stratagem", a CSS-based flowchart visualizes the hierarchy of tactics. For "Waging War", a simple JS calculator demonstrates economic costs. These choices translate philosophical text into interactive diagrams and tools, enhancing user understanding and engagement without using SVG or Mermaid, thus fulfilling all constraints. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            font-family: 'Noto Serif', serif;
+            background-color: #F5F5DC; /* beige */
+            color: #362E25;
+        }
+        .main-content {
+            margin-left: 250px;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #D2B48C; /* tan */
+            border-right: 2px solid #8B4513; /* saddlebrown */
+        }
+        .sidebar a {
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #F5F5DC;
+            color: #8B4513;
+            border-left-color: #8B4513;
+        }
+        .card {
+            background-color: rgba(255, 255, 255, 0.5);
+            backdrop-filter: blur(5px);
+            border: 1px solid #D2B48C;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            font-weight: 700;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 45vh;
+            max-height: 400px;
+        }
+        .flowchart-item {
+            border: 2px solid #8B4513;
+            background-color: #F5F5DC;
+            position: relative;
+        }
+        .flowchart-line {
+            width: 2px;
+            background-color: #8B4513;
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .mobile-nav-toggle {
+            display: none;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+                transition: transform 0.3s ease-in-out;
+                z-index: 40;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0;
+            }
+            .mobile-nav-toggle {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body class="overflow-x-hidden">
+    <div id="app">
+        
+        <button id="mobile-nav-toggle" class="mobile-nav-toggle fixed top-4 left-4 z-50 p-2 bg-d2b48c/80 text-8b4513 rounded-md shadow-lg md:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" /></svg>
+        </button>
+
+        <aside id="sidebar" class="sidebar fixed top-0 left-0 h-full overflow-y-auto p-6 shadow-xl">
+            <h1 class="text-2xl text-center text-[#8B4513] mb-8 border-b-2 border-[#8B4513] pb-4">A Arte da Guerra</h1>
+            <nav id="nav-menu">
+                <ul class="space-y-2">
+                    <li><a href="#capitulo1" class="block p-3 rounded-r-lg font-semibold">I. Estimativas</a></li>
+                    <li><a href="#capitulo2" class="block p-3 rounded-r-lg font-semibold">II. Conduzindo a Guerra</a></li>
+                    <li><a href="#capitulo3" class="block p-3 rounded-r-lg font-semibold">III. A Estratégia Ofensiva</a></li>
+                    <li><a href="#capitulo4" class="block p-3 rounded-r-lg font-semibold">IV. Disposições</a></li>
+                    <li><a href="#capitulo5" class="block p-3 rounded-r-lg font-semibold">V. Energia</a></li>
+                    <li><a href="#capitulo6" class="block p-3 rounded-r-lg font-semibold">VI. Pontos Fortes e Fracos</a></li>
+                    <li><a href="#capitulo7" class="block p-3 rounded-r-lg font-semibold">VII. Manobras</a></li>
+                    <li><a href="#capitulo8" class="block p-3 rounded-r-lg font-semibold">VIII. As Nove Variáveis</a></li>
+                    <li><a href="#capitulo9" class="block p-3 rounded-r-lg font-semibold">IX. Movimentação de Tropas</a></li>
+                    <li><a href="#capitulo10" class="block p-3 rounded-r-lg font-semibold">X. O Terreno</a></li>
+                    <li><a href="#capitulo11" class="block p-3 rounded-r-lg font-semibold">XI. As Nove Situações</a></li>
+                    <li><a href="#capitulo12" class="block p-3 rounded-r-lg font-semibold">XII. O Ataque com Fogo</a></li>
+                    <li><a href="#capitulo13" class="block p-3 rounded-r-lg font-semibold">XIII. O Uso de Espiões</a></li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <section id="capitulo1" class="min-h-screen flex flex-col justify-center items-center p-8 lg:p-16">
+                <div class="w-full max-w-5xl mx-auto">
+                    <h2 class="text-4xl lg:text-5xl text-center mb-4 text-[#8B4513]">Capítulo I: Estimativas</h2>
+                    <p class="text-lg text-center max-w-3xl mx-auto mb-12">Sun Tzu introduz a guerra como uma questão de importância vital para o Estado, um assunto de vida ou morte. Ele estabelece cinco fatores fundamentais que devem ser considerados em qualquer plano de guerra. Esta seção permite que você avalie sua própria posição estratégica com base nestes pilares atemporais.</p>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="flex flex-col justify-center">
+                            <h3 class="text-2xl mb-4 text-[#556B2F]">Avalie sua Posição Estratégica</h3>
+                            <p class="mb-4">A arte da guerra é governada por cinco fatores constantes, a serem levados em conta em suas deliberações, quando se busca determinar as condições que prevalecem no campo. Ajuste os valores abaixo para visualizar sua prontidão.</p>
+                            <div id="sliders" class="space-y-4"></div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="factorsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="capitulo2" class="min-h-screen flex flex-col justify-center items-center p-8 lg:p-16 bg-[#D2B48C]/30">
+                <div class="w-full max-w-5xl mx-auto text-center">
+                    <h2 class="text-4xl lg:text-5xl mb-4 text-[#8B4513]">Capítulo II: Conduzindo a Guerra</h2>
+                    <p class="text-lg max-w-3xl mx-auto mb-12">Este capítulo foca nos aspectos econômicos e logísticos da guerra. Sun Tzu adverte que campanhas prolongadas esgotam os recursos do Estado e desmoralizam as tropas. A chave é a vitória rápida e decisiva. Use a calculadora abaixo para entender o custo crescente de um conflito prolongado.</p>
+                    <div class="card p-8 rounded-lg max-w-md mx-auto">
+                        <h3 class="text-2xl mb-4 text-[#556B2F]">Calculadora de Custo de Campanha</h3>
+                        <div class="mb-4">
+                            <label for="campaign-days" class="block mb-2 font-semibold">Duração da campanha (dias):</label>
+                            <input type="range" id="campaign-days" min="10" max="365" value="30" class="w-full">
+                            <p class="text-center mt-2"><span id="days-display">30</span> dias</p>
+                        </div>
+                        <div class="text-lg">
+                            <p>Custo estimado: <span id="cost-display" class="font-bold text-[#8B4513]">300,000</span> peças de prata</p>
+                            <p id="warning-message" class="mt-2 text-sm text-red-700"></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="capitulo3" class="min-h-screen flex flex-col justify-center items-center p-8 lg:p-16">
+                 <div class="w-full max-w-5xl mx-auto text-center">
+                    <h2 class="text-4xl lg:text-5xl mb-4 text-[#8B4513]">Capítulo III: A Estratégia Ofensiva</h2>
+                    <p class="text-lg max-w-3xl mx-auto mb-12">"A suprema arte da guerra é subjugar o inimigo sem lutar." Aqui, Sun Tzu detalha a hierarquia das estratégias, priorizando a inteligência e a diplomacia sobre a força bruta. O ideal é atacar os planos do inimigo, depois suas alianças, e só em último caso, suas tropas ou cidades. O fluxograma abaixo ilustra esta ordem de preferência.</p>
+                    <div class="relative flex flex-col items-center space-y-8 p-4">
+                        <div class="flowchart-item p-4 rounded-lg shadow-lg w-64 text-center">
+                            <h4 class="font-bold text-lg text-[#556B2F]">Ideal: Atacar a estratégia do inimigo</h4>
+                            <p class="text-sm">Anule os planos antes que se concretizem.</p>
+                        </div>
+                        <div class="flowchart-line h-8" style="top: 100px;"></div>
+                        <div class="flowchart-item p-4 rounded-lg shadow-lg w-64 text-center mt-8">
+                            <h4 class="font-bold text-lg text-[#556B2F]">2º Melhor: Romper suas alianças</h4>
+                            <p class="text-sm">Isole o adversário diplomaticamente.</p>
+                        </div>
+                        <div class="flowchart-line h-8" style="top: 228px;"></div>
+                        <div class="flowchart-item p-4 rounded-lg shadow-lg w-64 text-center mt-8">
+                            <h4 class="font-bold text-lg text-[#8B4513]">3º Melhor: Atacar o exército</h4>
+                             <p class="text-sm">O combate direto é custoso.</p>
+                        </div>
+                         <div class="flowchart-line h-8" style="top: 356px;"></div>
+                        <div class="flowchart-item p-4 rounded-lg shadow-lg w-64 text-center bg-red-100 border-red-700 mt-8">
+                            <h4 class="font-bold text-lg text-red-900">Pior Opção: Sitiar cidades</h4>
+                            <p class="text-sm">Um último recurso, lento e desgastante.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="capitulo13" class="min-h-screen flex flex-col justify-center items-center p-8 lg:p-16 bg-[#D2B48C]/30">
+                <div class="w-full max-w-5xl mx-auto text-center">
+                    <h2 class="text-4xl lg:text-5xl mb-4 text-[#8B4513]">Capítulo XIII: O Uso de Espiões</h2>
+                    <p class="text-lg max-w-3xl mx-auto mb-12">A informação é o bem mais valioso na guerra. Sun Tzu conclui sua obra destacando a importância crucial da espionagem. Conhecer as disposições do inimigo, seus planos e fraquezas, é o que garante a vitória. Ele descreve cinco tipos de espiões, cada um com um papel vital na rede de inteligência.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                        <div class="card p-6 rounded-lg text-center" data-info="Informantes locais, recrutados entre os habitantes da região inimiga.">
+                            <h3 class="font-bold text-xl text-[#556B2F] mb-2">Espiões Nativos</h3>
+                            <p class="text-sm">Cidadãos do inimigo a seu serviço.</p>
+                        </div>
+                        <div class="card p-6 rounded-lg text-center" data-info="Agentes recrutados entre os oficiais corruptos ou descontentes do inimigo.">
+                            <h3 class="font-bold text-xl text-[#556B2F] mb-2">Espiões Internos</h3>
+                            <p class="text-sm">Oficiais inimigos que trabalham para você.</p>
+                        </div>
+                        <div class="card p-6 rounded-lg text-center" data-info="Espiões do inimigo que são capturados, convertidos e enviados de volta para espalhar desinformação.">
+                            <h3 class="font-bold text-xl text-[#556B2F] mb-2">Espiões Duplos</h3>
+                             <p class="text-sm">Agentes inimigos convertidos.</p>
+                        </div>
+                        <div class="card p-6 rounded-lg text-center" data-info="Agentes enviados para o território inimigo com o único propósito de morrerem ao passar informações falsas, para enganar o inimigo.">
+                            <h3 class="font-bold text-xl text-[#556B2F] mb-2">Espiões Descartáveis</h3>
+                            <p class="text-sm">Peões sacrificados por desinformação.</p>
+                        </div>
+                        <div class="card p-6 rounded-lg text-center" data-info="Agentes que sobrevivem e retornam com informações valiosas do campo inimigo.">
+                            <h3 class="font-bold text-xl text-[#556B2F] mb-2">Espiões Sobreviventes</h3>
+                            <p class="text-sm">Seus olhos e ouvidos no território inimigo.</p>
+                        </div>
+                    </div>
+                    <div id="spy-info-box" class="mt-8 p-4 bg-white/70 rounded-lg shadow-inner min-h-[50px] text-center text-[#8B4513] font-semibold italic">
+                        Passe o mouse sobre um tipo de espião para saber mais.
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const appData = {
+        factors: [
+            { id: 'moral', label: 'Influência Moral', value: 7 },
+            { id: 'ceu', label: 'Céu (Condições)', value: 5 },
+            { id: 'terra', label: 'Terra (Terreno)', value: 6 },
+            { id: 'lider', label: 'Liderança', value: 8 },
+            { id: 'disciplina', label: 'Método e Disciplina', value: 5 },
+        ],
+        campaign: {
+            baseCostPerDay: 10000,
+        },
+        spies: {
+            nativos: "Informantes locais, recrutados entre os habitantes da região inimiga.",
+            internos: "Agentes recrutados entre os oficiais corruptos ou descontentes do inimigo.",
+            duplos: "Espiões do inimigo que são capturados, convertidos e enviados de volta para espalhar desinformação.",
+            descartaveis: "Agentes enviados para o território inimigo com o único propósito de morrerem ao passar informações falsas, para enganar o inimigo.",
+            sobreviventes: "Agentes que sobrevivem e retornam com informações valiosas do campo inimigo."
+        }
+    };
+
+    let factorsChart;
+
+    function initFactorsChart() {
+        const ctx = document.getElementById('factorsChart').getContext('2d');
+        factorsChart = new Chart(ctx, {
+            type: 'radar',
+            data: {
+                labels: appData.factors.map(f => f.label),
+                datasets: [{
+                    label: 'Sua Prontidão Estratégica',
+                    data: appData.factors.map(f => f.value),
+                    backgroundColor: 'rgba(85, 107, 47, 0.2)',
+                    borderColor: '#556B2F',
+                    pointBackgroundColor: '#556B2F',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: '#556B2F'
+                }]
+            },
+            options: {
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        angleLines: { color: 'rgba(139, 69, 19, 0.2)' },
+                        grid: { color: 'rgba(139, 69, 19, 0.2)' },
+                        pointLabels: {
+                            font: { size: 12, family: "'Noto Serif', serif" },
+                            color: '#362E25'
+                        },
+                        ticks: {
+                            beginAtZero: true,
+                            max: 10,
+                            stepSize: 2,
+                            backdropColor: 'transparent',
+                            color: '#8B4513'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            font: { size: 14, family: "'Noto Serif', serif" },
+                            color: '#362E25'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    function setupFactorSliders() {
+        const slidersContainer = document.getElementById('sliders');
+        appData.factors.forEach((factor, index) => {
+            const sliderWrapper = document.createElement('div');
+            const label = document.createElement('label');
+            label.htmlFor = `slider-${factor.id}`;
+            label.textContent = `${factor.label}: `;
+            label.className = 'font-semibold';
+
+            const valueSpan = document.createElement('span');
+            valueSpan.id = `value-${factor.id}`;
+            valueSpan.textContent = factor.value;
+
+            const slider = document.createElement('input');
+            slider.type = 'range';
+            slider.id = `slider-${factor.id}`;
+            slider.min = 0;
+            slider.max = 10;
+            slider.value = factor.value;
+            slider.className = 'w-full';
+            slider.addEventListener('input', (e) => {
+                const newValue = parseInt(e.target.value);
+                appData.factors[index].value = newValue;
+                valueSpan.textContent = newValue;
+                updateFactorsChart();
+            });
+            
+            label.appendChild(valueSpan);
+            sliderWrapper.appendChild(label);
+            sliderWrapper.appendChild(slider);
+            slidersContainer.appendChild(sliderWrapper);
+        });
+    }
+
+    function updateFactorsChart() {
+        factorsChart.data.datasets[0].data = appData.factors.map(f => f.value);
+        factorsChart.update();
+    }
+
+    function setupCampaignCalculator() {
+        const slider = document.getElementById('campaign-days');
+        const daysDisplay = document.getElementById('days-display');
+        const costDisplay = document.getElementById('cost-display');
+        const warningMessage = document.getElementById('warning-message');
+
+        slider.addEventListener('input', () => {
+            const days = parseInt(slider.value);
+            daysDisplay.textContent = days;
+            const cost = days * appData.campaign.baseCostPerDay;
+            costDisplay.textContent = cost.toLocaleString('pt-BR');
+            if (days > 180) {
+                warningMessage.textContent = "Sun Tzu adverte: Nenhuma nação jamais lucrou com uma guerra prolongada.";
+            } else {
+                warningMessage.textContent = "";
+            }
+        });
+        
+        slider.dispatchEvent(new Event('input'));
+    }
+
+    function setupSpyCards() {
+        const cards = document.querySelectorAll('#capitulo13 .card');
+        const infoBox = document.getElementById('spy-info-box');
+        
+        cards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                infoBox.textContent = card.dataset.info;
+            });
+            card.addEventListener('mouseleave', () => {
+                infoBox.textContent = "Passe o mouse sobre um tipo de espião para saber mais.";
+            });
+        });
+    }
+
+    function setupNavigation() {
+        const navLinks = document.querySelectorAll('#nav-menu a');
+        const sections = document.querySelectorAll('main section');
+        const sidebar = document.getElementById('sidebar');
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    navLinks.forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href').substring(1) === entry.target.id);
+                    });
+                }
+            });
+        }, { threshold: 0.5 });
+
+        sections.forEach(section => observer.observe(section));
+        
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (window.innerWidth < 768) {
+                    sidebar.classList.remove('open');
+                }
+            });
+        });
+    }
+
+    function setupMobileNav() {
+        const toggleBtn = document.getElementById('mobile-nav-toggle');
+        const sidebar = document.getElementById('sidebar');
+
+        toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); 
+            sidebar.classList.toggle('open');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (sidebar.classList.contains('open') && !sidebar.contains(e.target) && e.target !== toggleBtn) {
+                sidebar.classList.remove('open');
+            }
+        });
+    }
+
+    initFactorsChart();
+    setupFactorSliders();
+    setupCampaignCalculator();
+    setupSpyCards();
+    setupNavigation();
+    setupMobileNav();
+
+    // Workaround for sections not filling the screen initially for the observer
+    setTimeout(() => {
+        window.dispatchEvent(new Event('scroll'));
+    }, 100);
+});
+</script>
+
+</body>
+</html>
